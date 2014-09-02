@@ -1,0 +1,31 @@
+package com.davidmis.thesis.phone;
+
+import java.nio.ByteBuffer;
+
+public class Ticket {
+	
+	public static byte[] buildTicket(byte[] alias, long time) {
+		ByteBuffer ticket = ByteBuffer.allocate(alias.length + 12);
+		
+		ticket.put((byte)0x11);
+		ticket.put((byte)0x11);
+		ticket.put((byte)0x11);
+		ticket.put((byte)0x11);
+		ticket.put(alias, 0, alias.length);
+		ticket.putLong(alias.length + 4, time); 
+		
+		return ticket.array();
+	}
+	
+	public static byte[] getAliasFromTicket(byte[] ticket) {
+		ByteBuffer alias = ByteBuffer.allocate(ticket.length - 12);
+		alias.put(ticket, 4, ticket.length - 12);
+		return alias.array();
+	}
+	
+	public static long getTimeFromTicket(byte[] ticket) {
+		ByteBuffer ticketBB = ByteBuffer.allocate(ticket.length);
+		ticketBB.put(ticket, 0, ticket.length);
+		return ticketBB.getLong(ticket.length - 8);
+	}
+}

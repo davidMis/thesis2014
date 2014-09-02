@@ -1,0 +1,162 @@
+package com.davidmis.thesis.phone.authorization;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.net.Socket;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+
+import android.util.Log;
+
+import com.davidmis.thesis.phone.AliasGenerator;
+import com.davidmis.thesis.phone.PersonIdentity;
+import com.davidmis.thesis.phone.Telephony;
+
+public class AuthenticationUser {
+
+	private static final String LOG_TAG = "AuthenticationUser-log";
+	private static final long TICKET_LIST_WINDOW = 86400000; // 1 Day, determines # of tickets to generate
+	
+	private static BigInteger N; //TODO get N and e from network
+	private static BigInteger e;
+	
+	private static ConcurrentHashMap<Long, byte[]> ticketList;
+	
+
+	public static ConcurrentHashMap<Long, byte[]> buildTicketList(PersonIdentity id, int num_days) {
+		ticketList = new ConcurrentHashMap<Long, byte[]>();
+		
+		final byte[] idSecret = id.getIdSecret();
+		final byte[] timingSecret = id.getTimingSecret();
+		
+	//	new Thread(new Runnable () {
+	//		public void run() {
+				Socket s = null;
+				try {
+					s = new Socket(Telephony.SERVER_IP, Telephony.SERVER_PORT);
+					PrintWriter out = new PrintWriter(s.getOutputStream(), true);	
+					BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+		
+					out.println(Telephony.TICKET_REQUEST);
+					N = new BigInteger(in.readLine());
+					e = new BigInteger(in.readLine());
+			
+					long cryptoTime = 0;
+					
+		//			Log.i(LOG_TAG, N.toString(16));
+		//			Log.i(LOG_TAG, e.toString(16));
+
+					
+					ArrayList<Long> timeList = new ArrayList<Long>();
+					ArrayList<BigInteger> rList = new ArrayList<BigInteger>();
+						
+		//			Log.i(LOG_TAG, "Start GrantTicket batch");
+					
+					long first_ticket_time = AliasGenerator.getLastUpdateTime(idSecret, System.currentTimeMillis());
+					long last_ticket_time = first_ticket_time + (num_days * TICKET_LIST_WINDOW);
+					long ticket_time = first_ticket_time;			
+					
+					out.println(Telephony.START_TICKET_BATCH);
+					while(ticket_time < last_ticket_time) {
+		//				Log.i(LOG_TAG, "Computing ticket");
+						
+						long startTime = System.currentTimeMillis();
+						
+						byte[] alias = AliasGenerator.getID(timingSecret, idSecret, ticket_time);
+						BigInteger r = generateR(N);
+						
+						timeList.add(ticket_time);
+						rList.add(r);
+						
+						
+						BigInteger mPrime = new BigInteger(Ticket.buildTicket(alias, ticket_time));
+						
+					//	Log.i(LOG_TAG, "alias: " + MainActivity.bytesToHex(alias));
+					//	Log.i(LOG_TAG, "time " + ticket_time);
+					//	Log.i(LOG_TAG, "Ticket: " + mPrime.toString(16));
+					//	Log.i(LOG_TAG, "ticket_alias: " + MainActivity.bytesToHex(Ticket.getAliasFromTicket(mPrime.toByteArray())));
+					//	Log.i(LOG_TAG, "ticket_time: " + Ticket.getTimeFromTicket(mPrime.toByteArray()));
+						
+					//	System.exit(1);
+						
+						mPrime = mPrime.multiply(r.modPow(e, N));
+						mPrime = mPrime.mod(N);
+						
+			//			Log.i(LOG_TAG, "Sending Ticket " + mPrime.toString());
+						
+						ticket_time = AliasGenerator.getNextUpdateTime(idSecret, ticket_time);
+
+						
+						long endTime = System.currentTimeMillis();
+						
+						cryptoTime += endTime - startTime;
+						
+						out.println(mPrime.toString());
+						
+					}
+					out.println(Telephony.END_TICKET_BATCH);
+					
+					//Get all from Server, store Tickets
+					
+					//Log.i(LOG_TAG, "# tickets expected from server: " + timeList.size());		
+					for(int i=0; i < timeList.size(); i++) {					
+						BigInteger r = rList.get(i);
+						Long ticketTime = timeList.get(i); 
+						
+						BigInteger s_prime = new BigInteger(in.readLine());
+						
+						long startTime = System.currentTimeMillis();	
+						s_prime = s_prime.multiply(r.modInverse(N));
+						s_prime = s_prime.mod(N);
+						
+						byte[] ticket = s_prime.toByteArray();
+						
+						// Store tickets
+						ticketList.put(ticketTime, ticket);
+						long endTime = System.currentTimeMillis();
+						
+						cryptoTime += endTime - startTime;
+					}
+					
+					Log.i("GT-phone", "#Days: " + num_days + ", time: " +
+							Long.toString(cryptoTime));
+					
+		//			Log.i(LOG_TAG, "End GrantTicket batch");
+
+				} catch (IOException e) {
+					Log.e(LOG_TAG, "Error in GrantTicket: " + e.getLocalizedMessage());
+				} finally {
+					try {
+						s.close();	
+					} catch (IOException e) {
+						Log.e(LOG_TAG, "Couldn't close s!: " + e.getLocalizedMessage());
+					} catch (NullPointerException e) {
+						Log.e(LOG_TAG, "Couldn't connect, maybe server is down?: " + e.getLocalizedMessage());
+					}
+				}	
+	//		}				
+//		}).start();
+		
+		return ticketList;
+	}
+	
+	private static BigInteger generateR(BigInteger N) {
+		BigInteger r;
+		SecureRandom rand = new SecureRandom();
+//		int count = 0;
+		do {
+	//		count = count + 1;
+			r = new BigInteger(1024, rand);  
+		//	Log.i(LOG_TAG, "Count = " + count);
+		} while(!r.gcd(N).equals(BigInteger.ONE));
+		
+		return r;
+	}
+	
+}
+
+
