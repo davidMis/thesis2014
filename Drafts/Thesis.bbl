@@ -1,0 +1,94 @@
+\begin{thebibliography}{10}
+
+\bibitem{worldbank2012maximizing}
+World Bank.
+\newblock {\em Information and Communications for Development 2012: Maximizing
+  Mobile}.
+\newblock 2012.
+
+\bibitem{barbancho2003cryptanalysis}
+Ana~M Barbancho and Alberto Peinado.
+\newblock Cryptanalysis of anonymous channel protocol for large-scale area in
+  wireless communications.
+\newblock {\em Computer Networks}, 43(6):777--785, 2003.
+
+\bibitem{benini2008assessing}
+Marco Benini and Sabrina Sicari.
+\newblock Assessing the risk of intercepting voip calls.
+\newblock {\em Computer Networks}, 52(12):2432--2446, 2008.
+
+\bibitem{blumberg2009whitepaper}
+Eckersley Blumbeg.
+\newblock On locational privacy, and how to avoid losing it forever.
+\newblock Technical report, Electronic Frontier Foundation, 2009.
+
+\bibitem{diffie1976new}
+Whitfield Diffie and Martin~E Hellman.
+\newblock New directions in cryptography.
+\newblock {\em Information Theory, IEEE Transactions on}, 22(6):644--654, 1976.
+
+\bibitem{dingledine2004tor}
+Roger Dingledine, Nick Mathewson, and Paul Syverson.
+\newblock Tor: The second-generation onion router.
+\newblock Technical report, DTIC Document, 2004.
+
+\bibitem{garfinkel2005voip}
+Simson~L Garfinkel.
+\newblock Voip and skype security.
+\newblock {\em Tactical Technology Collective}, 12, 2005.
+
+\bibitem{goldschlag1999onion}
+David Goldschlag, Michael Reed, and Paul Syverson.
+\newblock Onion routing.
+\newblock {\em Communications of the ACM}, 42(2):39--41, 1999.
+
+\bibitem{hwang2006wireless}
+Ren-Junn Hwang, Jing-Feng Li, and Yu-Kai Hsiao.
+\newblock A wireless-based authentication and anonymous channels for gsm
+  system.
+\newblock {\em Journal of Computers}, 17(1):31--36, 2006.
+
+\bibitem{lin2001wireless}
+Whe~Dar Lin and Jinn-Ke Jan.
+\newblock A wireless-based authentication and anonymous channels for large
+  scale area.
+\newblock In {\em Computers and Communications, 2001. Proceedings. Sixth IEEE
+  Symposium on}, pages 36--41. IEEE, 2001.
+
+\bibitem{melchor2007closed}
+Carlos~Aguilar Melchor, Yves Deswarte, and Julien Iguchi-Cartigny.
+\newblock Closed-circuit unobservable voice over ip.
+\newblock In {\em Computer Security Applications Conference, 2007. ACSAC 2007.
+  Twenty-Third Annual}, pages 119--128. IEEE, 2007.
+
+\bibitem{peinado2004privacy}
+Alberto Peinado.
+\newblock Privacy and authentication protocol providing anonymous channels in
+  gsm.
+\newblock {\em Computer Communications}, 27(17):1709--1715, 2004.
+
+\bibitem{perenyi2007skype}
+Marcell Per{\'e}nyi, Andr{\'a}s Gefferth, Trang~Dinh Dang, and S{\'a}ndor
+  Moln{\'a}r.
+\newblock Skype traffic identification.
+\newblock In {\em Global Telecommunications Conference, 2007. GLOBECOM'07.
+  IEEE}, pages 399--404. IEEE, 2007.
+
+\bibitem{schulzrinne2003rfc}
+H~Schulzrinne, S~Casner, R~Frederick, and V~Jacobson.
+\newblock Rfc 3550.
+\newblock {\em RTP: a transport protocol for real-time applications}, 7, 2003.
+
+\bibitem{wang2005tracking}
+Xinyuan Wang, Shiping Chen, and Sushil Jajodia.
+\newblock Tracking anonymous peer-to-peer voip calls on the internet.
+\newblock In {\em Proceedings of the 12th ACM conference on Computer and
+  communications security}, pages 81--91. ACM, 2005.
+
+\bibitem{yang2005secure}
+Chou-Chen Yang, Yuan-Liang Tang, Ren-Chiun Wang, and Hung-Wen Yang.
+\newblock A secure and efficient authentication protocol for anonymous channel
+  in wireless communications.
+\newblock {\em Applied Mathematics and Computation}, 169(2):1431--1439, 2005.
+
+\end{thebibliography}

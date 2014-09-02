@@ -1,0 +1,90 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{breqn}
+\usepackage[T1]{fontenc}
+
+\begin{document}
+
+\title{Alias Generator}
+\author{David Mis}
+
+\maketitle
+
+This report describes the alias generator as implemented in the network prototype. The alias generator allows phones to generate pseudonyms that appear random to network administrators, but still allow the phone to be reached by anyone who was previously authorized by the phone to do so. The generator described in this report not only supplies unpredictable pseudonyms, but also generates new pseudonyms at unpredictable times (from the point of view of network administrators). The only restriction is that the time between pseudonym updates can not exceed a \texttt{GLOBAL_MAX_TIME} parameter. All pseudonyms older than \texttt{GLOBAL_MAX_TIME} can be discarded from the network location registers; otherwise the network would need to store stale pseudonyms indefinitely. 
+
+I see three reasons why random update intervals are preferable over a fixed-interval scheme: first, it prevents all phones from updating pseudonyms at the same time, which would put unnecessary load on the network. Second, with carefully chosen parameters, it will more difficult for network administrators to detect exactly how many phones are in a given location area at any particular time (I still need to prove this, and I suspect this advantage vanishes as the number of phones in area increases.) Third, it will be more difficult for a network administrator to know if a location update is coming from a phone that is being turned on, moving location areas, or just providing its periodic update. 
+
+Assume we have two phones, Alice and Bob. Each phone has two secrets it must share in order to be reachable for calls---a \texttt{timing_secret} and a \texttt{ID_secret}\footnote{I see no reason why the two secrets can not be the same value, but I keep them separate for clarity and generality.}. At the highest level, the alias generator is a one-way function $F$ such that:
+\begin{equation*}
+	F(\texttt{timing_secret}, \texttt{ID_secret}, \texttt{current_time}) = \texttt{current_pseudonym}.
+\end{equation*}
+
+The generator proceeds in two phases. In the first phase, it determines the last time the pseudonym was updated, \texttt{last_update_time}, based on \texttt{timing_secret} and \texttt{current_time}. In the second phase, the generator produces \texttt{current_pseudonym} based on \texttt{last_update_time} and \texttt{ID_secret}. Phones offer \texttt{current_pseudonym} to the network at \texttt{last_update_time} and when changing location areas in order to be reachable for calls. Also, phones can initiate an outgoing call by providing the network with the \texttt{current_pseudonym} of a friend. The rest of this report describes the two phases of the generator and concludes with a brief discussion. The entire generator process is illustrated in AliasGeneratorIllustration.pdf.
+
+The alias generator has several parameters, described below. All times throughout this report are in milliseconds since the start of the UNIX Epoch\footnote{ There might be an issue with this, look more into it.}:
+
+	\begin{center}
+		\begin{tabular}{p{4cm} p{9cm} }
+\texttt{GLOBAL_MAX_UPDATE}: &  
+			The network's timeout for aliases in the location registers. Phones must not have intervals longer than \texttt{GLOBAL_MAX_UPDATE} between alias updates or they may be unreachable. This is the only global parameter; all others can be set individually by phones and shared with friends (although it may be preferable for all phones to share the same parameters to avoid leaking information based on the timing of updates). \\[0.5cm]
+\texttt{PERIOD_LENGTH}: &
+			A period is a relatively long time frame which provides a reference for computing \texttt{update_time}. In the prototype network, phones set this parameter to 1 day. \\[0.5cm]
+\texttt{MIN_UPDATE}: &
+			A phone-specific minimum time between updates. The prototype implementation assumes this is a positive value, but it could be set to 0 with only a few small modifications. \\[0.5cm]
+\texttt{MAX_UPDATE}: &
+			A phone-specific maximum time between updates. Must be less than or equal to \texttt{GLOBAL_MAX_UPDATE}. \\[0.5cm]
+\texttt{UPDATE_GRANULARITY}: & 
+	A relatively small length of time that gives the number of possible updates per period. 
+\end{tabular}
+\end{center}
+
+	The first phase proceeds as follows. First, the generator determines the start of the current period, named \texttt{period_start}, by computing 
+\begin{equation*}
+	\texttt{period_start} = \texttt{current_time} - (\texttt{PERIOD_LENGTH}\; \% \;\texttt{current_time}). 
+\end{equation*}
+It then produces an array of \texttt{alias_update_scalars}. This is done by hashing 
+\begin{equation*}
+	\texttt{timing_digest} = SHA-256(\texttt{timing_secret}, \texttt{period_start}, \texttt{iteration_number})
+\end{equation*}
+
+where \texttt{iteration_number} is incremented for each hash necessary to fill the array. Each digest gives a number of \texttt{alias_update_scalars} by taking successive strings of bits from the digest. The generator can now recursively produce a sequence of \texttt{alias_update_times} by
+\begin{equation*}
+\begin{split}
+\texttt{alias_update_time_1} =  &\;  \texttt{period_start} + \texttt{MIN_UPDATE}  + \\ 
+	& (\frac{\texttt{alias_update_scalar_1}}{\texttt{max_alias_update_scalar}}) (\texttt{MAX_UPDATE} - \texttt{MIN_UPDATE}), \\
+\end{split}
+\end{equation*}
+\begin{equation*}
+\begin{split}
+	\texttt{alias_update_time_n} =  &\;  \texttt{period_start} + \texttt{MIN_UPDATE}  + \\ 
+	& (\frac{\texttt{alias_update_scalar_n-1}}{\texttt{max_alias_update_scalar}}) (\texttt{MAX_UPDATE} - \texttt{MIN_UPDATE}), \\
+\end{split}
+\end{equation*}
+	  
+where \texttt{max_alias_update_scalar} is the largest possible scalar (ie. for 16-bit scalars, this is 0xFFFF). The largest \texttt{alias_update_time} that does not exceed \texttt{current_time} is taken to be the \texttt{last_update_time}, and this concludes the first phase of the generator.
+
+Note that there is one special case: If \texttt{current_time} is less than \texttt{alias_update_time_1}, then the first phase must be repeated using the previous period. This is a relatively rare corner case since it will only happen when a phone tried to make a call in the first few minutes of a period, and it can be detected quickly since \texttt{alias_update_time_1} only depends on \texttt{alias_scalar_1}.
+	    
+The second phase of the generator consists of a single step: the generator produces \texttt{current_pseudonym} by:
+\begin{equation*}
+	\texttt{current_pseudonym} = SHA-256(\texttt{last_update_time}, \texttt{ID_secret}).
+\end{equation*}
+
+\section{Discussion}
+We have some flexibility in choosing values for the five parameters. For the prototype network, I set the following parameter values:
+
+\begin{center}
+\begin{tabular} { l  l }
+	\texttt{GLOBAL_MAX_UPDATE} &= \texttt{MAX_UPDATE} = 10 minutes, \\
+	\texttt{MIN_UPDATE} &= 1 minute, \\
+	\texttt{PERIOD_LENGTH} &= 1 day, \\
+	\texttt{UPDATE_GRANULARITY} &= 1 second.
+\end{tabular}
+\end{center}
+
+The number of \texttt{alias_update_scalars} that the generator must produce is based on \texttt{PERIOD_LENGTH} and \texttt{MIN_UPDATE} since there must be at least enough scalars to fill a period even if every update happens after \texttt{MIN_UPDATE} milliseconds. If a user wishes to set \texttt{MIN_UPDATE} to 0, then the generator will need to produce scalars until it finds an \texttt{alias_update_time} that exceeds \texttt{current_time}. My current implementation does not operate this way, but this would be an easy modification. 
+
+The number of bits needed per scalar is determined by the \texttt{UPDATE_GRANULARITY} and the difference between \texttt{MAX_UPDATE} and \texttt{MIN_UPDATE}. Using the above parameter values, scalars are 16 bit values, and at most 90 hashes must be computed to find a pseudonym\footnote{The true worst case is 92 hashes if \texttt{current_time} falls at the very beginning of a period.}. On a Nexus S Android phone, an unoptimized generator consistently computes an alias in less than a tenth of a second, so even performing hundreds of hashes at call-time will be unnoticeable to a user.
+\end{document}
+
+
